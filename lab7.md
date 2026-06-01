@@ -1,92 +1,247 @@
-# Лабораторная работа №7 – Проектирование логической модели БД (ERD)
+# Лабораторная работа №7 – Проектирование логической модели БД
 
-## Выделение основных хранимых сущностей
-На основе анализа предметной области, результатов [lab1](lab1.md) и функциональных требований [lab5](lab5.md) выделены следующие сущности:
+## Выделяем основные сущности
 
-| Сущность | Обоснование выделения |
-|---|---|
-| `Tourist` | Хранит анкетные данные. Прямо следует из FR-TUR и описания категорий туристов (`lab1`, `lab5`). |
-| `Flight` | Учитывает рейсы, типы самолётов и лимиты загрузки. Необходимо для запросов 8 и 15 (`1.txt`, `lab5`). |
-| `TouristGroup` | Объединяет туристов в одну поездку. Позволяет отслеживать статус группы и привязывать финансовые/визовые операции к конкретному вылету (`lab1`, `lab3`). |
-| `GroupTourist` (связующая) | Реализует отношение M:N между `Tourist` и `TouristGroup`. Позволяет одному туристу летать в составе разных групп в разные периоды (`lab1` – история посещений). |
-| `Hotel` | Справочник партнёрских гостиниц. Нормализовано: вынесено отдельно от номеров (`lab1`). |
-| `Room` | Конкретные номера в гостиницах. Хранит тип и вместимость. Необходимо для точного бронирования (`lab5`, FR-HTL). |
-| `Booking` | Факт расселения группы в номер. Связывает `TouristGroup`, `Room` и даты проживания (`lab5`, FR-HTL-02). |
-| `Visa` | Учитывает статус визы для каждого туриста в рамках конкретной поездки. Отдельная сущность, т.к. визы меняются от рейса к рейсу (`lab5`, FR-VIS). |
-| `ExcursionAgency` | Справочник принимающих агентств. Вынесен отдельно для нормализации и рейтинга качества (`lab5`, FR-EXC-04). |
-| `Excursion` | Каталог маршрутов, дат, цен и ограничений. Привязан к агентству (`lab5`). |
-| `ExcursionBooking` | Связующая таблица записи туристов на экскурсии. Учитывает статус оплаты и участия (`lab5`, FR-EXC-02). |
-| `Cargo` | Грузовые ведомости по каждому туристу. Хранит вес, места, страховку, маркировку (`lab1`, `lab5` FR-CRG). |
-| `FinancialTransaction` | Учёт доходов/расходов. Привязывается к группе, категории операции и дате (`lab5`, FR-FIN). |
-| `SystemUser` | Учётные записи сотрудников представительства. Требуется для аутентификации и ролевой модели (`lab6`, NFR-SEC). |
+На основе анализа предметной области и функциональных требований выделяем следующие **хранимые сущности**:
 
-**Обоснование:** Список сущностей полностью покрывает модули из `lab5.md` и закрывает все 15 типовых запросов из `1.txt`. Разделение на справочники (`Hotel`, `ExcursionAgency`) и операционные таблицы (`Booking`, `FinancialTransaction`) соответствует принципам реляционного проектирования и устраняет избыточность, выявленную в `lab3.md` (проблема "фрагментированного учёта" и "дублирования ввода").
+| Сущность | Почему она нужна | Ссылка на требования |
+|----------|-----------------|---------------------|
+| **Tourist** (Турист) | Хранит анкетные данные, категорию и историю поездок; основа для виз, груза, экскурсий | FR-TUR-01, FR-TUR-03 |
+| **TouristGroup** (Группа) | Объединяет туристов в одну поездку, привязывает к рейсу и датам пребывания | FR-TUR-02, FR-FLT-03 |
+| **Flight** (Рейс) | Учитывает расписание, тип ВС и лимиты загрузки для расчётов | FR-FLT-01, FR-FLT-02 |
+| **Hotel** (Гостиница) | Справочник партнёрских отелей для нормализации данных о размещении | FR-HTL-01, FR-HTL-03 |
+| **Room** (Номер) | Конкретные номера с типом и вместимостью для точного бронирования | FR-HTL-01, FR-HTL-02 |
+| **Booking** (Бронирование) | Факт расселения группы в номер с датами заезда/выезда | FR-HTL-02 |
+| **Visa** (Виза) | Статус визы для туриста в рамках конкретной поездки | FR-VIS-01, FR-VIS-02 |
+| **ExcursionAgency** (Агентство) | Справочник принимающих агентств с контактами и рейтингом | FR-EXC-01, FR-EXC-04 |
+| **Excursion** (Экскурсия) | Каталог маршрутов с датами, ценами и ограничениями | FR-EXC-01, FR-EXC-02 |
+| **ExcursionBooking** (Запись на экскурсию) | Связывает туриста с экскурсией, учитывает оплату и статус | FR-EXC-02, FR-EXC-03 |
+| **Cargo** (Груз) | Весовая ведомость туриста: места, вес, упаковка, страховка | FR-CRG-01, FR-CRG-02 |
+| **FinancialTransaction** (Финансовая операция) | Учёт доходов/расходов по статьям для отчётности | FR-FIN-01, FR-FIN-02 |
+| **SystemUser** (Пользователь системы) | Учётные записи сотрудников для аутентификации и аудита | NFR-SEC-01, NFR-SEC-02 |
 
----
+### Промежуточные (связующие) сущности:
 
-## Шаг 2. Атрибуты, ключи и абстрактные типы данных
-Для каждой сущности определены атрибуты. Типы данных указаны абстрактно, готовые к маппингу в MySQL (`INT`, `VARCHAR`, `DATE`, `DECIMAL`, `ENUM` и т.д.).
-
-| Сущность | Атрибуты (PK подчёркнуты, FK помечены) | Абстрактные типы |
-|---|---|---|
-| `Tourist` | **`tourist_id`**, `passport_number` (U), `first_name`, `last_name`, `birth_date`, `gender`, `category` (leisure/cargo/child), `parent_tourist_id` (FK → Tourist), `created_at` | INT, VARCHAR, DATE, ENUM, FK, DATETIME |
-| `Flight` | **`flight_id`**, `flight_number`, `departure_date`, `aircraft_type`, `max_passengers`, `max_cargo_weight`, `max_volume_weight` | INT, VARCHAR, DATE, VARCHAR, INT, DECIMAL, DECIMAL |
-| `TouristGroup` | **`group_id`**, `flight_id` (FK → Flight), `start_date`, `end_date`, `status`, `is_deleted` | INT, FK, DATE, DATE, ENUM, BOOLEAN |
-| `GroupTourist` | `group_id` (FK → TouristGroup), `tourist_id` (FK → Tourist), **`id`** (PK-суррогат), `role_in_group` | FK, FK, INT, VARCHAR |
-| `Hotel` | **`hotel_id`**, `name` (U), `address`, `phone`, `star_rating` | INT, VARCHAR, VARCHAR, VARCHAR, INT |
-| `Room` | **`room_id`**, `hotel_id` (FK → Hotel), `room_number`, `room_type`, `capacity` | INT, FK, VARCHAR, VARCHAR, INT |
-| `Booking` | **`booking_id`**, `group_id` (FK → TouristGroup), `room_id` (FK → Room), `check_in`, `check_out`, `status` | INT, FK, FK, DATE, DATE, ENUM |
-| `Visa` | **`visa_id`**, `tourist_id` (FK → Tourist), `group_id` (FK → TouristGroup), `status`, `issue_date`, `expiry_date`, `rejection_comment` | INT, FK, FK, ENUM, DATE, DATE, TEXT |
-| `ExcursionAgency` | **`agency_id`**, `name` (U), `contact_email`, `phone`, `rating` | INT, VARCHAR, VARCHAR, VARCHAR, DECIMAL |
-| `Excursion` | **`excursion_id`**, `agency_id` (FK → ExcursionAgency), `title`, `description`, `excursion_date`, `price`, `min_age`, `max_capacity` | INT, FK, VARCHAR, TEXT, DATE, DECIMAL, INT, INT |
-| `ExcursionBooking` | **`exc_booking_id`**, `tourist_id` (FK → Tourist), `excursion_id` (FK → Excursion), `status`, `paid_amount` | INT, FK, FK, ENUM, DECIMAL |
-| `Cargo` | **`cargo_id`**, `tourist_id` (FK → Tourist), `group_id` (FK → TouristGroup), `places_count`, `weight_kg`, `packaging_cost`, `insurance_cost`, `total_cost`, `label_number` (U), `status` | INT, FK, FK, INT, DECIMAL, DECIMAL, DECIMAL, DECIMAL, VARCHAR, ENUM |
-| `FinancialTransaction` | **`transaction_id`**, `group_id` (FK → TouristGroup, NULL), `tourist_id` (FK → Tourist, NULL), `type` (income/expense), `category`, `amount`, `currency`, `transaction_date`, `comment` | INT, FK, FK, ENUM, VARCHAR, DECIMAL, VARCHAR, DATE, TEXT |
-| `SystemUser` | **`user_id`**, `login` (U), `password_hash`, `role`, `is_active`, `last_login` | INT, VARCHAR, VARCHAR, ENUM, BOOLEAN, DATETIME |
-
-**Обоснование:** 
-- Атрибуты взяты напрямую из `lab1.md` (основные хранимые сущности) и адаптированы под `lab5.md` (FR-TUR-03, FR-CRG-02, FR-FIN-01).
-- Поля `is_deleted` добавлены для реализации мягкого удаления (soft delete), что соответствует требованию `NFR-REL-04` из `lab6.md` (запрет на удаление записей с активными связями).
-- Суррогатные ключи (`*_id`) выбраны вместо составных для упрощения индексации и обратной разработки в MySQL Workbench, что является стандартной практикой для учебных проектов 3 курса.
-- Типы `DECIMAL` использованы для денег и веса, чтобы избежать ошибок округления (требование финансовой точности из `lab3.md`).
+| Сущность | Зачем нужна | Тип связи |
+|----------|-------------|-----------|
+| **GroupTourist** | Реализует M:N между туристом и группой: один турист может летать в разных группах в разные сезоны | M:N + атрибут role_in_group |
+| **ParentChildLink** | Явная связь "родитель - ребёнок" для контроля сопровождения (дети не ходят одни) | 1:N (само-ссылка на Tourist, вынесена для наглядности) |
 
 ---
 
-## Шаг 3. Связи между сущностями и промежуточные таблицы
-Связи спроектированы с учётом бизнес-процессов AS-IS/TO-BE (`lab3.md`) и функциональных модулей (`lab5.md`).
+## Атрибуты сущностей
 
-| Связь | Тип | Описание | Обоснование |
-|---|---|---|---|
-| `Flight` → `TouristGroup` | 1:N | Один рейс может обслуживать несколько групп (или одна группа = один рейс). В модели принято: группа привязана к одному рейсу. | Запросы 8, 15 (`1.txt`). Учёт загрузки самолёта. |
-| `Tourist` ↔ `TouristGroup` | M:N | Реализовано через `GroupTourist`. Один турист может быть в разных группах в разные сезоны. | `lab1` (история посещений), `lab5` (FR-TUR-03). |
-| `Tourist` → `Tourist` (self) | 1:N | `parent_tourist_id`. Ребёнок привязан к родителю. | `lab3` (проблема "отсутствие контроля за детьми"), правило из `1.txt`. |
-| `Hotel` → `Room` | 1:N | В гостинице много номеров. | Нормализация 3НФ. Устраняет повторение адреса гостиницы в каждом бронировании. |
-| `TouristGroup` → `Booking` | 1:N | Группа может бронировать несколько номеров. Номер резервируется под одну группу в конкретный период. | `lab5` (FR-HTL-01). Учёт загрузки отелей (запрос 5). |
-| `Booking` → `Room` | N:1 | Бронь привязана к конкретному номеру. | Логика расселения. |
-| `TouristGroup` → `Visa` | 1:N | Виза оформляется на туриста для конкретной поездки. | `lab5` (FR-VIS-01). Позволяет хранить историю отказов/выдач. |
-| `ExcursionAgency` → `Excursion` | 1:N | Агентство организует множество экскурсий. | `lab5` (FR-EXC-04). Позволяет ранжировать агентства по среднему рейтингу. |
-| `Tourist` ↔ `Excursion` | M:N | Реализовано через `ExcursionBooking`. | `lab5` (FR-EXC-02). Запрос 6, 7 (`1.txt`). |
-| `Tourist` → `Cargo` | 1:N | Турист может сдавать несколько грузовых мест в рамках одной поездки. | `lab5` (FR-CRG-01). Запрос 9, 12. |
-| `TouristGroup` → `FinancialTransaction` | 1:N | Операции учитываются по группе. Опционально привязка к `Tourist`. | `lab5` (FR-FIN-01). Запрос 10, 11, 13. |
-| `SystemUser` | Нет прямых связей | Отдельный контур безопасности. В будущем можно добавить `created_by`/`updated_by` в операционные таблицы для аудита. | `lab6` (NFR-SEC-01, 02, 04). |
+### Tourist
+```
+tourist_id       : PK, INT
+passport_number  : VARCHAR(20), NOT NULL, UNIQUE
+first_name       : VARCHAR(50), NOT NULL
+last_name        : VARCHAR(50), NOT NULL
+birth_date       : DATE, NOT NULL
+gender           : ENUM('M','F'), NOT NULL
+category         : ENUM('leisure','cargo','child'), NOT NULL
+parent_id        : FK -> Tourist.tourist_id, NULLABLE (только для category='child')
+hotel_preference : VARCHAR(100), NULLABLE
+created_at       : DATETIME, DEFAULT NOW()
+```
 
-**Обоснование:** Промежуточные таблицы (`GroupTourist`, `ExcursionBooking`) введены строго для разрешения отношений M:N, что является обязательным условием 3НФ. Связь "Турист-Ребёнок" реализована через самореференцию, что закрывает бизнес-правило из `1.txt` и проблему из `lab3.md` без создания отдельной сущности.
+### TouristGroup
+```
+group_id         : PK, INT
+flight_id        : FK -> Flight.flight_id, NOT NULL
+start_date       : DATE, NOT NULL
+end_date         : DATE, NOT NULL
+status           : ENUM('forming','in_progress','completed','cancelled'), DEFAULT 'forming'
+is_deleted       : BOOLEAN, DEFAULT FALSE (soft delete)
+```
+
+### Flight
+```
+flight_id        : PK, INT
+flight_number    : VARCHAR(20), NOT NULL
+departure_date   : DATETIME, NOT NULL
+aircraft_type    : ENUM('passenger','cargo','combi'), NOT NULL
+max_passengers   : INT, NOT NULL, CHECK (max_passengers > 0)
+max_cargo_weight : DECIMAL(10,2), NOT NULL, CHECK (max_cargo_weight >= 0)
+max_volume_weight: DECIMAL(10,2), NOT NULL, CHECK (max_volume_weight >= 0)
+```
+
+### Hotel
+```
+hotel_id         : PK, INT
+name             : VARCHAR(100), NOT NULL, UNIQUE
+address          : TEXT, NOT NULL
+phone            : VARCHAR(30), NULLABLE
+star_rating      : INT, CHECK (star_rating BETWEEN 1 AND 5)
+```
+
+### Room
+```
+room_id          : PK, INT
+hotel_id         : FK -> Hotel.hotel_id, NOT NULL
+room_number      : VARCHAR(20), NOT NULL
+room_type        : ENUM('single','double','suite','family'), NOT NULL
+capacity         : INT, NOT NULL, CHECK (capacity > 0)
+```
+
+### Booking
+```
+booking_id       : PK, INT
+group_id         : FK -> TouristGroup.group_id, NOT NULL
+room_id          : FK -> Room.room_id, NOT NULL
+check_in         : DATE, NOT NULL
+check_out        : DATE, NOT NULL
+status           : ENUM('confirmed','pending','cancelled'), DEFAULT 'pending'
+```
+
+### Visa
+```
+visa_id          : PK, INT
+tourist_id       : FK -> Tourist.tourist_id, NOT NULL
+group_id         : FK -> TouristGroup.group_id, NOT NULL
+status           : ENUM('pending','issued','rejected','expired'), NOT NULL
+issue_date       : DATE, NULLABLE
+expiry_date      : DATE, NULLABLE
+rejection_comment: TEXT, NULLABLE
+```
+
+### ExcursionAgency
+```
+agency_id        : PK, INT
+name             : VARCHAR(100), NOT NULL, UNIQUE
+contact_email    : VARCHAR(100), NULLABLE
+phone            : VARCHAR(30), NULLABLE
+rating           : DECIMAL(3,2), CHECK (rating BETWEEN 0 AND 5)
+```
+
+### Excursion
+```
+excursion_id     : PK, INT
+agency_id        : FK -> ExcursionAgency.agency_id, NOT NULL
+title            : VARCHAR(100), NOT NULL
+description      : TEXT, NULLABLE
+excursion_date   : DATETIME, NOT NULL
+price            : DECIMAL(10,2), NOT NULL, CHECK (price >= 0)
+min_age          : INT, DEFAULT 0
+max_capacity     : INT, NOT NULL, CHECK (max_capacity > 0)
+```
+
+### ExcursionBooking
+```
+exc_booking_id   : PK, INT
+tourist_id       : FK -> Tourist.tourist_id, NOT NULL
+excursion_id     : FK -> Excursion.excursion_id, NOT NULL
+status           : ENUM('registered','paid','attended','cancelled'), DEFAULT 'registered'
+paid_amount      : DECIMAL(10,2), DEFAULT 0
+```
+
+### Cargo
+```
+cargo_id         : PK, INT
+tourist_id       : FK -> Tourist.tourist_id, NOT NULL
+group_id         : FK -> TouristGroup.group_id, NOT NULL
+places_count     : INT, NOT NULL, CHECK (places_count > 0)
+weight_kg        : DECIMAL(10,2), NOT NULL, CHECK (weight_kg > 0)
+packaging_cost   : DECIMAL(10,2), DEFAULT 0
+insurance_cost   : DECIMAL(10,2), DEFAULT 0
+total_cost       : DECIMAL(10,2), NOT NULL
+label_number     : VARCHAR(50), UNIQUE, NOT NULL
+status           : ENUM('received','in_warehouse','shipped'), DEFAULT 'received'
+```
+
+### FinancialTransaction
+```
+transaction_id   : PK, INT
+group_id         : FK -> TouristGroup.group_id, NULLABLE
+tourist_id       : FK -> Tourist.tourist_id, NULLABLE
+type             : ENUM('income','expense'), NOT NULL
+category         : ENUM('hotel','flight','excursion','visa','cargo','airport','other'), NOT NULL
+amount           : DECIMAL(12,2), NOT NULL
+currency         : VARCHAR(3), DEFAULT 'USD'
+transaction_date : DATE, NOT NULL
+comment          : TEXT, NULLABLE
+```
+
+### SystemUser
+```
+user_id          : PK, INT
+login            : VARCHAR(50), NOT NULL, UNIQUE
+password_hash    : VARCHAR(255), NOT NULL
+role             : ENUM('manager','accountant','admin'), NOT NULL
+is_active        : BOOLEAN, DEFAULT TRUE
+last_login       : DATETIME, NULLABLE
+```
+
+### GroupTourist (связующая)
+```
+id               : PK, INT (суррогатный ключ для упрощения индексации)
+group_id         : FK -> TouristGroup.group_id, NOT NULL
+tourist_id       : FK -> Tourist.tourist_id, NOT NULL
+role_in_group    : ENUM('tourist','child','leader'), DEFAULT 'tourist'
+# Уникальность пары:
+UNIQUE KEY uk_group_tourist (group_id, tourist_id)
+```
 
 ---
 
-## Шаг 4. Ограничения и целостность данных
-На этом этапе формализуются правила, гарантирующие корректность данных в БД.
+## Связи и ограничения целостности
 
-| Тип ограничения | Применение в модели | Обоснование (ссылка на прошлые работы) |
-|---|---|---|
-| **PRIMARY KEY** | На всех таблицах (`*_id`) | Гарантирует уникальную идентификацию записей. Стандарт реляционных БД. |
-| **FOREIGN KEY** | Все связи из Шага 3. Правила: `ON DELETE RESTRICT`, `ON UPDATE CASCADE` | Предотвращает появление "сиротских" записей. Соответствует `NFR-REL-04` (`lab6`) – запрет удаления активных записей. |
-| **UNIQUE** | `Tourist.passport_number`, `Hotel.name`, `ExcursionAgency.name`, `Cargo.label_number`, `SystemUser.login` | Исключает дублирование критических идентификаторов. Паспорт и логин должны быть уникальными по определению. |
-| **NOT NULL** | `passport_number`, `first_name`, `last_name`, `birth_date`, `category`, `flight_number`, `check_in`, `issue_date`, `password_hash`, `amount` | Обязательные поля для функционирования системы. Заполнение регламентировано `lab5` (FR-TUR-01, FR-VIS-01 и др.). |
-| **CHECK** | `category IN ('leisure', 'cargo', 'child')` | Категоризация строго из ТЗ (`1.txt`). |
-| **CHECK** | `weight_kg > 0`, `max_passengers > 0` | Физическая непротиворечивость данных. |
-| **CHECK / Логическое** | `IF category = 'child' THEN parent_tourist_id IS NOT NULL` | Реализует правило сопровождения детей (`1.txt`, `lab3` проблема 7). |
-| **DEFAULT** | `status = 'pending'`, `is_deleted = FALSE`, `created_at = NOW()` | Упрощает внесение данных, автоматизирует метки времени и статусы по умолчанию. |
-| **Аудит** | `created_by`, `updated_at` (рекомендуется добавить ко всем операционным таблицам) | Реализует `NFR-SEC-04` (`lab6`) – ведение журнала действий пользователей. |
+### Основные связи
+- `Flight` -1:N-> `TouristGroup`: одна группа летит одним рейсом
+- `Tourist` -M:N-> `TouristGroup` через `GroupTourist`: турист может участвовать в разных группах
+- `Tourist` -1:N-> `Tourist` (self): ребёнок привязан к родителю (проверка: если category='child', то parent_id NOT NULL)
+- `Hotel` -1:N-> `Room`: в отеле много номеров
+- `TouristGroup` -1:N-> `Booking`: группа может занимать несколько номеров
+- `Booking` -N:1-> `Room`: номер резервируется под одну группу в период
+- `Tourist` -1:N-> `Visa`: виза оформляется на туриста для конкретной поездки
+- `ExcursionAgency` -1:N-> `Excursion`: агентство проводит много экскурсий
+- `Tourist` -M:N-> `Excursion` через `ExcursionBooking`: запись на экскурсии
+- `Tourist` -1:N-> `Cargo`: турист сдаёт один или несколько грузов
+- `TouristGroup` / `Tourist` -1:N-> `FinancialTransaction`: операции привязываются к группе или конкретному туристу
 
-**Обоснование:** Ограничения напрямую вытекают из нефункциональных требований безопасности и надёжности (`lab6.md`). `CHECK` и `NOT NULL` предотвращают ошибки ввода на уровне СУБД, а не только в UI (`NFR-USE-03`). `RESTRICT` на удаление защищает от случайной потери данных, что критично для финансовой отчётности и визовых пакетов.
+### Ограничения (конкретика для СУБД)
+```
+# Первичные ключи
+ALTER TABLE <each_table> ADD PRIMARY KEY (<*_id>);
+
+# Внешние ключи с защитой от "сирот"
+ALTER TABLE TouristGroup 
+  ADD CONSTRAINT fk_group_flight 
+  FOREIGN KEY (flight_id) REFERENCES Flight(flight_id)
+  ON DELETE RESTRICT ON UPDATE CASCADE;
+
+# Уникальные поля
+ALTER TABLE Tourist ADD UNIQUE (passport_number);
+ALTER TABLE Hotel ADD UNIQUE (name);
+ALTER TABLE Cargo ADD UNIQUE (label_number);
+ALTER TABLE SystemUser ADD UNIQUE (login);
+
+# Обязательные поля (пример)
+ALTER TABLE Tourist 
+  MODIFY passport_number VARCHAR(20) NOT NULL,
+  MODIFY first_name VARCHAR(50) NOT NULL,
+  MODIFY category ENUM(...) NOT NULL;
+
+# Проверочные ограничения
+ALTER TABLE Flight 
+  ADD CONSTRAINT chk_passengers CHECK (max_passengers > 0),
+  ADD CONSTRAINT chk_cargo CHECK (max_cargo_weight >= 0);
+
+ALTER TABLE Tourist 
+  ADD CONSTRAINT chk_child_parent 
+  CHECK (category != 'child' OR parent_id IS NOT NULL);
+
+# Значения по умолчанию
+ALTER TABLE Tourist 
+  MODIFY created_at DATETIME DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE FinancialTransaction 
+  MODIFY currency VARCHAR(3) DEFAULT 'USD';
+```
+
+### Обоснование проектных решений
+- Суррогатные ключи (`*_id`) выбраны вместо составных для упрощения индексации и обратной разработки в MySQL Workbench - стандартная практика для учебных проектов.
+- Тип `DECIMAL` для денег и веса предотвращает ошибки округления (требование финансовой точности, FR-FIN-01).
+- Поле `is_deleted` реализует мягкое удаление, что соответствует требованию сохранения истории операций (NFR-REL-04).
+- Связь "родитель-ребёнок" через самореференцию закрывает бизнес-правило: дети не перемещаются без сопровождения (предметная область, раздел "Категории туристов").
+- Все ограничения `FOREIGN KEY ... ON DELETE RESTRICT` защищают от случайного удаления записей с активными связями (визы, бронирования, груз) - прямое соответствие NFR-REL-04.
+- CHECK-ограничения на категории, веса, рейтинги обеспечивают валидацию на уровне БД, а не только в интерфейсе (поддержка NFR-USE-03).
